@@ -5,7 +5,10 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -38,7 +41,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
-public class ChatDialogsActivity extends AppCompatActivity implements QBSystemMessageListener,QBChatDialogMessageListener {
+public class ChatDialogsActivity extends AppCompatActivity implements QBSystemMessageListener, QBChatDialogMessageListener {
 
     FloatingActionButton floatingActionButton;
     ListView lstChatDialogs;
@@ -47,6 +50,11 @@ public class ChatDialogsActivity extends AppCompatActivity implements QBSystemMe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat_dialogs);
+        Toolbar toolbar = findViewById(R.id.chat_dialog_toolbar);
+        toolbar.setTitle(R.string.app_name);
+        setSupportActionBar(toolbar);
+
+
         createSessionForChat();
         lstChatDialogs = findViewById(R.id.lstChatDialog);
         lstChatDialogs.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -62,6 +70,29 @@ public class ChatDialogsActivity extends AppCompatActivity implements QBSystemMe
         loadChatDialogs();
         floatingActionButton = (FloatingActionButton) findViewById(R.id.chatdialog_adduser);
 
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.chat_dialog_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.chat_dialog_menu_user:
+                showUserProfile();
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
+
+    private void showUserProfile() {
+        Intent intent = new Intent(ChatDialogsActivity.this, UserProfile.class);
+        startActivity(intent);
     }
 
     @Override
@@ -165,7 +196,7 @@ public class ChatDialogsActivity extends AppCompatActivity implements QBSystemMe
                         QBSystemMessagesManager qbSystemMessagesManager = QBChatService.getInstance().getSystemMessagesManager();
                         qbSystemMessagesManager.addSystemMessageListener(ChatDialogsActivity.this);
 
-                        QBIncomingMessagesManager qbIncomingMessagesManager=QBChatService.getInstance().getIncomingMessagesManager();
+                        QBIncomingMessagesManager qbIncomingMessagesManager = QBChatService.getInstance().getIncomingMessagesManager();
                         qbIncomingMessagesManager.addDialogMessageListener(ChatDialogsActivity.this);
 
                     }

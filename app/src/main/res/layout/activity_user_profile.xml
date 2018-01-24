@@ -1,14 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.demo.testchatapp.SingUpActivity">
+    tools:context="com.demo.testchatapp.UserProfile">
+
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/user_update_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorPrimary"
+        android:minHeight="?attr/actionBarSize"
+        android:theme="?attr/actionBarTheme"
+        app:titleTextColor="@android:color/white" />
 
     <LinearLayout
         android:id="@+id/grouplogin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_below="@id/user_update_toolbar"
         android:orientation="vertical">
 
         <android.support.design.widget.TextInputLayout
@@ -16,35 +27,63 @@
             android:layout_height="wrap_content">
 
             <EditText
-                android:id="@+id/singUpUsername"
+                android:id="@+id/update_edt_old_password"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Username"
-                android:padding="5dp" />
-        </android.support.design.widget.TextInputLayout>
-
-        <android.support.design.widget.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <EditText
-                android:id="@+id/singUpFullName"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Enter full name"
-                android:padding="5dp" />
-        </android.support.design.widget.TextInputLayout>
-
-        <android.support.design.widget.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <EditText
-                android:id="@+id/singUpPassword"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Password"
+                android:hint="Enter your old password"
                 android:inputType="textPassword"
+                android:padding="5dp" />
+        </android.support.design.widget.TextInputLayout>
+
+        <android.support.design.widget.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <EditText
+                android:id="@+id/update_edt_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Enter your new password"
+                android:inputType="textPassword"
+                android:padding="5dp" />
+        </android.support.design.widget.TextInputLayout>
+
+        <android.support.design.widget.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <EditText
+                android:id="@+id/update_edt_full_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Enter your full name"
+                android:inputType="textNoSuggestions"
+                android:padding="5dp" />
+        </android.support.design.widget.TextInputLayout>
+
+        <android.support.design.widget.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <EditText
+                android:id="@+id/update_edt_email"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Enter your email"
+                android:inputType="textNoSuggestions|textEmailAddress"
+                android:padding="5dp" />
+        </android.support.design.widget.TextInputLayout>
+
+        <android.support.design.widget.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <EditText
+                android:id="@+id/update_edt_phonee"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Enter your phone"
+                android:inputType="phone"
                 android:padding="5dp" />
         </android.support.design.widget.TextInputLayout>
 
@@ -60,25 +99,24 @@
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/btnSingUp"
+            android:id="@+id/update_user_btn_update"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_marginRight="5dp"
             android:background="@color/colorPrimaryDark"
-            android:onClick="register"
-            android:text="SingUp"
+            android:onClick="updateUser"
+            android:text="Update Profile"
             android:textColor="@color/colorAccent" />
 
         <Button
-            android:id="@+id/btnCancel"
+            android:id="@+id/update_user_btn_cancel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_marginLeft="5dp"
             android:background="@color/colorBlueDark"
-            android:onClick="cancel"
-            android:text="cancel"
+            android:text="Cancel"
             android:textColor="@color/colorAccent" />
     </LinearLayout>
 </RelativeLayout>

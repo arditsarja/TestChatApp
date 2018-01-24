@@ -69,7 +69,7 @@
             android:id="@+id/btnSingUp"
             android:layout_gravity="center"
             android:onClick="singUp"
-            android:background="@color/colorPrimaryDark"
+            android:background="@color/colorBlueDark"
             android:textColor="@color/colorAccent"
             android:layout_width="wrap_content"
             android:layout_marginLeft="5dp"

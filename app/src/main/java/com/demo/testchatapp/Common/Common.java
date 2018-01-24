@@ -12,6 +12,11 @@ import java.util.List;
 public class Common {
     public static final String DIALOG_EXTRA = "Dialogs";
 
+    public static boolean isNullOrEmptyString(String string) {
+        return (string != null && !string.trim().isEmpty() ? false : true);
+    }
+
+
     public static String createChateDialogName(List<Integer> qbUsers) {
         List<QBUser> qbUsers1 = QBUsersHolder.getInstance().getUsersByIDS(qbUsers);
         StringBuilder name = new StringBuilder();
