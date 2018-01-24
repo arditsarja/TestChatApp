@@ -1,6 +1,7 @@
 package com.demo.testchatapp.Adapter;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +11,7 @@ import android.widget.TextView;
 
 import com.amulyakhare.textdrawable.TextDrawable;
 import com.amulyakhare.textdrawable.util.ColorGenerator;
+import com.demo.testchatapp.Holder.QBUnreadMessageHolder;
 import com.demo.testchatapp.R;
 import com.quickblox.chat.model.QBChatDialog;
 
@@ -55,10 +57,12 @@ public class ChatDialogsAdapters extends BaseAdapter {
             view = inflater.inflate(R.layout.list_chat_dialogs, null);
 
             TextView txtTitle, txtMessage;
-            ImageView imageView;
+            ImageView imageView, unreadMessage;
             txtMessage = view.findViewById(R.id.list_chat_dialog_message);
             txtTitle = view.findViewById(R.id.list_chat_dialog_title);
             imageView = view.findViewById(R.id.image_chatDialog);
+            unreadMessage = view.findViewById(R.id.image_unread);
+
 
             ColorGenerator generator = ColorGenerator.MATERIAL;
             int randomColor = generator.getRandomColor();
@@ -75,6 +79,17 @@ public class ChatDialogsAdapters extends BaseAdapter {
             // GetFirst character fro, chat dialog title for create chat dialog image
             TextDrawable drawable = builder.build(txtTitle.getText().toString().substring(0, 1).toUpperCase(), randomColor);
             imageView.setImageDrawable(drawable);
+
+            TextDrawable.IBuilder unreadBuilder = TextDrawable.builder().beginConfig()
+                    .withBorder(4)
+                    .endConfig()
+                    .round();
+            int unread_count = QBUnreadMessageHolder.getInstance().getBundle().getInt(qbChatDialogs.get(position).getDialogId());
+            if (unread_count > 0) {
+                TextDrawable unread_drawable = unreadBuilder.build(""+unread_count, Color.RED);
+                    unreadMessage.setImageDrawable(unread_drawable);
+            }
+
 
         }
 
