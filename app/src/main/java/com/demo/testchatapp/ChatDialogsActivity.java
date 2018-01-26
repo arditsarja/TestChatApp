@@ -7,11 +7,13 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import com.demo.testchatapp.Adapter.ChatDialogsAdapters;
 import com.demo.testchatapp.Common.Common;
@@ -46,6 +48,8 @@ public class ChatDialogsActivity extends AppCompatActivity implements QBSystemMe
     FloatingActionButton floatingActionButton;
     ListView lstChatDialogs;
 
+    int contextMenuIndexClicked = -1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,6 +61,7 @@ public class ChatDialogsActivity extends AppCompatActivity implements QBSystemMe
 
         createSessionForChat();
         lstChatDialogs = findViewById(R.id.lstChatDialog);
+        registerForContextMenu(lstChatDialogs);
         lstChatDialogs.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -88,6 +93,50 @@ public class ChatDialogsActivity extends AppCompatActivity implements QBSystemMe
                 break;
         }
         return true;
+    }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        getMenuInflater().inflate(R.menu.chat_dialog_context_menu, menu);
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+
+        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
+        switch (item.getItemId()) {
+            case R.id.delete_dialog_menu:
+                deleteDialogMenu(info.position);
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
+
+    private void deleteDialogMenu(int position) {
+
+        final QBChatDialog chatDialog = (QBChatDialog) lstChatDialogs.getAdapter().getItem(position);
+        QBRestChatService.deleteDialog(chatDialog.getDialogId(), false).performAsync(new QBEntityCallback<Void>() {
+            @Override
+            public void onSuccess(Void aVoid, Bundle bundle) {
+                QBChatDialogHolder.getInstance().removeDialog(chatDialog.getDialogId());
+                ChatDialogsAdapters adapters = new ChatDialogsAdapters(getBaseContext(), QBChatDialogHolder.getInstance().getAllDialogs());
+                lstChatDialogs.setAdapter(adapters);
+                adapters.notifyDataSetChanged();
+
+                //the other side
+//                loadChatDialogs();
+            }
+
+            @Override
+            public void onError(QBResponseException e) {
+                Toast.makeText(ChatDialogsActivity.this, "Error: " + e.getMessage()
+                        , Toast.LENGTH_SHORT).show();
+                Log.e("ERROR", e.getMessage());
+            }
+        });
+
     }
 
     private void showUserProfile() {
@@ -218,7 +267,6 @@ public class ChatDialogsActivity extends AppCompatActivity implements QBSystemMe
         });
 
     }
-
 
     @Override
     public void processMessage(QBChatMessage qbChatMessage) {

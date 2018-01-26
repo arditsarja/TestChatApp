@@ -60,4 +60,7 @@ public class QBChatDialogHolder {
         return new ArrayList<>(this.qbChatDialogs.values());
     }
 
+    public void removeDialog(String id){
+        qbChatDialogs.remove(id);
+    }
 }

@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -17,8 +18,11 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
 
+import com.amulyakhare.textdrawable.TextDrawable;
 import com.demo.testchatapp.Adapter.ChatMessageAdapter;
 import com.demo.testchatapp.Common.Common;
 import com.demo.testchatapp.Holder.QBChatMessageHolder;
@@ -27,9 +31,11 @@ import com.quickblox.chat.QBIncomingMessagesManager;
 import com.quickblox.chat.QBRestChatService;
 import com.quickblox.chat.exception.QBChatException;
 import com.quickblox.chat.listeners.QBChatDialogMessageListener;
+import com.quickblox.chat.listeners.QBChatDialogParticipantListener;
 import com.quickblox.chat.model.QBChatDialog;
 import com.quickblox.chat.model.QBChatMessage;
 import com.quickblox.chat.model.QBDialogType;
+import com.quickblox.chat.model.QBPresence;
 import com.quickblox.chat.request.QBDialogRequestBuilder;
 import com.quickblox.chat.request.QBMessageGetBuilder;
 import com.quickblox.chat.request.QBMessageUpdateBuilder;
@@ -37,6 +43,7 @@ import com.quickblox.core.QBEntityCallback;
 import com.quickblox.core.exception.QBResponseException;
 
 import org.jivesoftware.smack.SmackException;
+import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smackx.muc.DiscussionHistory;
 
 import java.util.ArrayList;
@@ -52,31 +59,24 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
     Toolbar chatMessageGroupToolbar;
     ChatMessageAdapter adapter;
 
+    //Update Online User
+
+    ImageView imgOnlineCount;
+    TextView txtOnlineCount;
+
     int contextMenuIndexClicked = -1;
     boolean isEditMode = false;
     QBChatMessage editMessage;
 
     @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-        getMenuInflater().inflate(R.menu.chat_message_content_menu, menu);
-    }
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_chat_message);
 
-    @Override
-    public boolean onContextItemSelected(MenuItem item) {
-        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
-        contextMenuIndexClicked = info.position;
+        initView();
+        initChatDialogs();
+        retriveMessage();
 
-        switch (item.getItemId()) {
-            case R.id.chat_message_update_menu:
-                updateMessage();
-                break;
-            case R.id.chat_message_delete_menu:
-                deleteMessage();
-                break;
-            default:
-                break;
-        }
-        return true;
     }
 
     private void deleteMessage() {
@@ -108,60 +108,6 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
         editContent.setText(editMessage.getBody());
         isEditMode = true; // set Edit mode
 
-    }
-
-    @Override
-    protected void onPostCreate(@Nullable Bundle savedInstanceState) {
-        super.onPostCreate(savedInstanceState);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        qbChatDialog.removeMessageListrener(this);
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        qbChatDialog.removeMessageListrener(this);
-    }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_chat_message);
-
-        initView();
-        initChatDialogs();
-        retriveMessage();
-
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-
-        if (qbChatDialog.getType() == QBDialogType.GROUP || qbChatDialog.getType() == QBDialogType.PUBLIC_GROUP)
-            getMenuInflater().inflate(R.menu.chat_message_group_menu, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.edit_group_name_menu:
-                editGroupName();
-                break;
-            case R.id.add_group_user_menu:
-                addUserGroup();
-                break;
-            case R.id.remove_group_user_menu:
-                removeUserGroup();
-                break;
-            default:
-                break;
-        }
-        return true;
     }
 
     private void removeUserGroup() {
@@ -206,7 +152,8 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
             public void onClick(DialogInterface dialog, int which) {
                 dialog.cancel();
             }
-        });AlertDialog alertDialog = builder.create();
+        });
+        AlertDialog alertDialog = builder.create();
         alertDialog.show();
 
 
@@ -236,52 +183,53 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
     }
 
     public void submit(View v) {
-        if (!isEditMode) {
-            QBChatMessage chatMessage = new QBChatMessage();
-            chatMessage.setBody(editContent.getText().toString());
-            chatMessage.setSenderId(QBChatService.getInstance().getUser().getId());
-            chatMessage.setSaveToHistory(true);
-            try {
-                qbChatDialog.sendMessage(chatMessage);
-            } catch (SmackException.NotConnectedException e) {
-                e.printStackTrace();
-            }
-
-            if (qbChatDialog.getType() == QBDialogType.PRIVATE) {
-                QBChatMessageHolder.getInstance().putMessage(qbChatDialog.getDialogId(), chatMessage);
-                ArrayList<QBChatMessage> messages = QBChatMessageHolder.getInstance().getChatMessageByDialog(chatMessage.getDialogId());
-                adapter = new ChatMessageAdapter(getBaseContext(), messages);
-                lstChatMessages.setAdapter(adapter);
-                adapter.notifyDataSetChanged();
-            }
-            editContent.setText("");
-            editContent.setFocusable(true);
-        } else {
-            final ProgressDialog progressDialog = new ProgressDialog(ChatMessageActivity.this);
-            progressDialog.setMessage("Please wait..");
-            progressDialog.show();
-            QBMessageUpdateBuilder messageUpdateBuilder = new QBMessageUpdateBuilder();
-            messageUpdateBuilder.updateText(editContent.getText().toString()).markDelivered().markRead();
-            QBRestChatService.updateMessage(editMessage.getId(), qbChatDialog.getDialogId(), messageUpdateBuilder).performAsync(new QBEntityCallback<Void>() {
-                @Override
-                public void onSuccess(Void aVoid, Bundle bundle) {
-                    retriveMessage();
-                    editContent.setText("");
-                    editContent.setFocusable(true);
-                    progressDialog.dismiss();
-
-                    isEditMode = false;
-                    editMessage = null;
+        if (!editContent.getText().toString().trim().isEmpty())
+            if (!isEditMode) {
+                QBChatMessage chatMessage = new QBChatMessage();
+                chatMessage.setBody(editContent.getText().toString());
+                chatMessage.setSenderId(QBChatService.getInstance().getUser().getId());
+                chatMessage.setSaveToHistory(true);
+                try {
+                    qbChatDialog.sendMessage(chatMessage);
+                } catch (SmackException.NotConnectedException e) {
+                    e.printStackTrace();
                 }
 
-                @Override
-                public void onError(QBResponseException e) {
-                    progressDialog.dismiss();
-                    isEditMode = false;
-                    editMessage = null;
+                if (qbChatDialog.getType() == QBDialogType.PRIVATE) {
+                    QBChatMessageHolder.getInstance().putMessage(qbChatDialog.getDialogId(), chatMessage);
+                    ArrayList<QBChatMessage> messages = QBChatMessageHolder.getInstance().getChatMessageByDialog(chatMessage.getDialogId());
+                    adapter = new ChatMessageAdapter(getBaseContext(), messages);
+                    lstChatMessages.setAdapter(adapter);
+                    adapter.notifyDataSetChanged();
                 }
-            });
-        }
+                editContent.setText("");
+                editContent.setFocusable(true);
+            } else {
+                final ProgressDialog progressDialog = new ProgressDialog(ChatMessageActivity.this);
+                progressDialog.setMessage("Please wait..");
+                progressDialog.show();
+                QBMessageUpdateBuilder messageUpdateBuilder = new QBMessageUpdateBuilder();
+                messageUpdateBuilder.updateText(editContent.getText().toString()).markDelivered().markRead();
+                QBRestChatService.updateMessage(editMessage.getId(), qbChatDialog.getDialogId(), messageUpdateBuilder).performAsync(new QBEntityCallback<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid, Bundle bundle) {
+                        retriveMessage();
+                        editContent.setText("");
+                        editContent.setFocusable(true);
+                        progressDialog.dismiss();
+
+                        isEditMode = false;
+                        editMessage = null;
+                    }
+
+                    @Override
+                    public void onError(QBResponseException e) {
+                        progressDialog.dismiss();
+                        isEditMode = false;
+                        editMessage = null;
+                    }
+                });
+            }
     }
 
     private void initChatDialogs() {
@@ -318,9 +266,48 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
                 }
             });
         }
+        QBChatDialogParticipantListener participantListener = new QBChatDialogParticipantListener() {
+            @Override
+            public void processPresence(String dialogId, QBPresence qbPresence) {
+                if (dialogId == qbChatDialog.getDialogId()) {
+                    QBRestChatService.getChatDialogById(dialogId).performAsync(new QBEntityCallback<QBChatDialog>() {
+                        @Override
+                        public void onSuccess(QBChatDialog qbChatDialog, Bundle bundle) {
+                            try {
+                                qbChatDialog.getOnlineUsers();
+                                TextDrawable.IBuilder builder = TextDrawable.builder()
+                                        .beginConfig()
+                                        .withBorder(4)
+                                        .endConfig()
+                                        .round();
+                                TextDrawable online = builder.build("" + qbChatDialog.getOnlineUsers().size(),
+                                        qbChatDialog.getOnlineUsers().size() > 1 ? Color.GREEN : Color.RED
+                                );
+                                imgOnlineCount.setImageDrawable(online);
+                                txtOnlineCount.setText("" + qbChatDialog.getOnlineUsers().size()
+                                        + "/" + qbChatDialog.getOccupants().size() + " online");
+
+                            } catch (XMPPException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        @Override
+                        public void onError(QBResponseException e) {
+
+                        }
+                    });
+
+
+                }
+            }
+        };
+        qbChatDialog.addParticipantListener(participantListener);
+        qbChatDialog.addMessageListener(this);
+
+
         chatMessageGroupToolbar.setTitle(qbChatDialog.getName());
         setSupportActionBar(chatMessageGroupToolbar);
-        qbChatDialog.addMessageListener(this);
 
 
     }
@@ -330,11 +317,79 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
         submitButton = findViewById(R.id.send_button);
         editContent = findViewById(R.id.edit_content);
         chatMessageGroupToolbar = findViewById(R.id.chat_message_toolbar);
+        imgOnlineCount = findViewById(R.id.img_online_count);
+        txtOnlineCount = findViewById(R.id.txt_online_count);
+
         //add context menu
         registerForContextMenu(lstChatMessages);
 
     }
 
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        getMenuInflater().inflate(R.menu.chat_message_content_menu, menu);
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
+        contextMenuIndexClicked = info.position;
+
+        switch (item.getItemId()) {
+            case R.id.chat_message_update_menu:
+                updateMessage();
+                break;
+            case R.id.chat_message_delete_menu:
+                deleteMessage();
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
+
+    @Override
+    protected void onPostCreate(@Nullable Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        qbChatDialog.removeMessageListrener(this);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        qbChatDialog.removeMessageListrener(this);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+
+        if (qbChatDialog.getType() == QBDialogType.GROUP || qbChatDialog.getType() == QBDialogType.PUBLIC_GROUP)
+            getMenuInflater().inflate(R.menu.chat_message_group_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.edit_group_name_menu:
+                editGroupName();
+                break;
+            case R.id.add_group_user_menu:
+                addUserGroup();
+                break;
+            case R.id.remove_group_user_menu:
+                removeUserGroup();
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
 
     @Override
     public void processMessage(String s, QBChatMessage qbChatMessage, Integer integer) {
