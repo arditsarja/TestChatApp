@@ -51,4 +51,12 @@ public class QBUsersHolder {
 
         return listOfUsers;
     }
+
+    public ArrayList<QBUser> getAllUsers() {
+        ArrayList<QBUser> users = new ArrayList<>();
+        for (int i = 0; i < this.qbUserSparseArray.size(); i++) {
+            users.add(this.qbUserSparseArray.valueAt(i));
+        }
+        return users;
+    }
 }
