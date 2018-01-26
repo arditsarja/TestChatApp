@@ -4,8 +4,11 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -21,6 +24,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.amulyakhare.textdrawable.TextDrawable;
 import com.demo.testchatapp.Adapter.ChatMessageAdapter;
@@ -39,13 +43,23 @@ import com.quickblox.chat.model.QBPresence;
 import com.quickblox.chat.request.QBDialogRequestBuilder;
 import com.quickblox.chat.request.QBMessageGetBuilder;
 import com.quickblox.chat.request.QBMessageUpdateBuilder;
+import com.quickblox.content.QBContent;
+import com.quickblox.content.model.QBFile;
 import com.quickblox.core.QBEntityCallback;
 import com.quickblox.core.exception.QBResponseException;
+import com.quickblox.core.request.QBRequestUpdateBuilder;
+import com.squareup.picasso.Picasso;
 
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smackx.muc.DiscussionHistory;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 
 public class ChatMessageActivity extends AppCompatActivity implements QBChatDialogMessageListener {
@@ -61,12 +75,13 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
 
     //Update Online User
 
-    ImageView imgOnlineCount;
+    ImageView imgOnlineCount, dialogAvatar;
     TextView txtOnlineCount;
 
     int contextMenuIndexClicked = -1;
     boolean isEditMode = false;
     QBChatMessage editMessage;
+    private int SELECT_PICTURE = 7171;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -234,6 +249,24 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
 
     private void initChatDialogs() {
         qbChatDialog = (QBChatDialog) getIntent().getSerializableExtra(Common.DIALOG_EXTRA);
+
+        if (qbChatDialog.getPhoto()!=null){
+            QBContent.getFile(Integer.parseInt(qbChatDialog.getPhoto())).performAsync(new QBEntityCallback<QBFile>() {
+                @Override
+                public void onSuccess(QBFile qbFile, Bundle bundle) {
+                    Picasso.with(getBaseContext()).load(qbFile.getPublicUrl())
+                            .resize(50, 50)
+                            .centerCrop().into(dialogAvatar);
+                }
+
+                @Override
+                public void onError(QBResponseException e) {
+                    Log.e("Error picture", e.getMessage());
+                }
+            });
+        }
+
+
         qbChatDialog.initForChat(QBChatService.getInstance());
         QBIncomingMessagesManager incomingMessage = QBChatService.getInstance().getIncomingMessagesManager();
         incomingMessage.addDialogMessageListener(new QBChatDialogMessageListener() {
@@ -318,11 +351,88 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
         editContent = findViewById(R.id.edit_content);
         chatMessageGroupToolbar = findViewById(R.id.chat_message_toolbar);
         imgOnlineCount = findViewById(R.id.img_online_count);
+        dialogAvatar = findViewById(R.id.dialog_avatar);
+        dialogAvatar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent selectImage = new Intent();
+                selectImage.setType("image/*");
+                selectImage.setAction(Intent.ACTION_GET_CONTENT);
+                startActivityForResult(Intent.createChooser(selectImage, "Select Picture"), SELECT_PICTURE);
+
+            }
+        });
+
         txtOnlineCount = findViewById(R.id.txt_online_count);
 
         //add context menu
         registerForContextMenu(lstChatMessages);
 
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, final Intent data) {
+        if (resultCode == RESULT_OK) {
+            if (requestCode == SELECT_PICTURE) {
+                final ProgressDialog dialog = new ProgressDialog(ChatMessageActivity.this);
+                dialog.setMessage("Please wait...");
+                dialog.setCancelable(false);
+                dialog.show();
+
+                try {
+                    InputStream is = getContentResolver().openInputStream(data.getData());
+                    final Bitmap bitmap = BitmapFactory.decodeStream(is);
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
+                    File file = new File(Environment.getExternalStorageDirectory() + "/image.png");
+                    FileOutputStream fileOut = new FileOutputStream(file);
+                    fileOut.write(baos.toByteArray());
+                    fileOut.flush();
+                    fileOut.close();
+
+                    int imageSizeKb = (int) file.length() / 1024;
+                    if (imageSizeKb >= 100 * 1024) {
+                        Toast.makeText(this, "File size is to big", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    // Upload File
+                    QBContent.uploadFileTask(file, true, null).performAsync(new QBEntityCallback<QBFile>() {
+                        @Override
+                        public void onSuccess(QBFile qbFile, Bundle bundle) {
+                            qbChatDialog.setPhoto(qbFile.getId().toString());
+                            QBRequestUpdateBuilder requestBuilder = new QBRequestUpdateBuilder();
+                            QBRestChatService.updateGroupChatDialog(qbChatDialog, requestBuilder).performAsync(new QBEntityCallback<QBChatDialog>() {
+                                @Override
+                                public void onSuccess(QBChatDialog qbChatDialog, Bundle bundle) {
+                                    dialog.dismiss();
+                                    dialogAvatar.setImageBitmap(bitmap);
+                                }
+
+                                @Override
+                                public void onError(QBResponseException e) {
+                                    dialog.dismiss();
+                                    Toast.makeText(ChatMessageActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onError(QBResponseException e) {
+                            Log.e("ERROR", e.getMessage());
+                        }
+                    });
+
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                Picasso.with(getApplicationContext()).load(data.getData())
+                        .resize(20, 20)
+                        .into(dialogAvatar);
+            }
+        }
     }
 
     @Override

@@ -2,6 +2,8 @@ package com.demo.testchatapp.Adapter;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +16,11 @@ import com.amulyakhare.textdrawable.util.ColorGenerator;
 import com.demo.testchatapp.Holder.QBUnreadMessageHolder;
 import com.demo.testchatapp.R;
 import com.quickblox.chat.model.QBChatDialog;
+import com.quickblox.content.QBContent;
+import com.quickblox.content.model.QBFile;
+import com.quickblox.core.QBEntityCallback;
+import com.quickblox.core.exception.QBResponseException;
+import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 
@@ -33,7 +40,6 @@ public class ChatDialogsAdapters extends BaseAdapter {
 
         inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
-
 
     @Override
     public int getCount() {
@@ -57,12 +63,11 @@ public class ChatDialogsAdapters extends BaseAdapter {
             view = inflater.inflate(R.layout.list_chat_dialogs, null);
 
             TextView txtTitle, txtMessage;
-            ImageView imageView, unreadMessage;
+            final ImageView imageView, unreadMessage;
             txtMessage = view.findViewById(R.id.list_chat_dialog_message);
             txtTitle = view.findViewById(R.id.list_chat_dialog_title);
             imageView = view.findViewById(R.id.image_chatDialog);
             unreadMessage = view.findViewById(R.id.image_unread);
-
 
             ColorGenerator generator = ColorGenerator.MATERIAL;
             int randomColor = generator.getRandomColor();
@@ -70,15 +75,34 @@ public class ChatDialogsAdapters extends BaseAdapter {
             txtMessage.setText(getItem(position).getLastMessage());
             txtTitle.setText(getItem(position).getName());
 
-            TextDrawable.IBuilder builder = TextDrawable.builder().beginConfig()
-                    .withBorder(4)
-                    .endConfig()
-                    .round();
+            if (qbChatDialogs.get(position).getPhoto().equals("null")) {
 
 
-            // GetFirst character fro, chat dialog title for create chat dialog image
-            TextDrawable drawable = builder.build(txtTitle.getText().toString().substring(0, 1).toUpperCase(), randomColor);
-            imageView.setImageDrawable(drawable);
+                TextDrawable.IBuilder builder = TextDrawable.builder().beginConfig()
+                        .withBorder(4)
+                        .endConfig()
+                        .round();
+
+
+                // GetFirst character fro, chat dialog title for create chat dialog image
+                TextDrawable drawable = builder.build(txtTitle.getText().toString().substring(0, 1).toUpperCase(), randomColor);
+                imageView.setImageDrawable(drawable);
+            } else {
+                QBContent.getFile(Integer.parseInt(qbChatDialogs.get(position).getPhoto())).performAsync(new QBEntityCallback<QBFile>() {
+                    @Override
+                    public void onSuccess(QBFile qbFile, Bundle bundle) {
+                        Picasso.with(context).load(qbFile.getPublicUrl())
+                                .resize(50, 50)
+                                .centerCrop().into(imageView);
+                    }
+
+                    @Override
+                    public void onError(QBResponseException e) {
+                        Log.e("Error picture", e.getMessage());
+                    }
+                });
+            }
+
 
             TextDrawable.IBuilder unreadBuilder = TextDrawable.builder().beginConfig()
                     .withBorder(4)
@@ -86,8 +110,8 @@ public class ChatDialogsAdapters extends BaseAdapter {
                     .round();
             int unread_count = QBUnreadMessageHolder.getInstance().getBundle().getInt(qbChatDialogs.get(position).getDialogId());
             if (unread_count > 0) {
-                TextDrawable unread_drawable = unreadBuilder.build(""+unread_count, Color.RED);
-                    unreadMessage.setImageDrawable(unread_drawable);
+                TextDrawable unread_drawable = unreadBuilder.build("" + unread_count, Color.RED);
+                unreadMessage.setImageDrawable(unread_drawable);
             }
 
 
@@ -97,39 +121,3 @@ public class ChatDialogsAdapters extends BaseAdapter {
         return view;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
