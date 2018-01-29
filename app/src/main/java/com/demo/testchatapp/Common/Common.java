@@ -17,6 +17,9 @@ public class Common {
     public static final String UPDATE_ADD_MODE = "add";
     public static final String UPDATE_REMOVE_MODE = "remove";
 
+
+    public static final int SELECT_PICTURE = 7171;
+
     public static boolean isNullOrEmptyString(String string) {
         return (string != null && !string.trim().isEmpty() ? false : true);
     }

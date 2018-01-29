@@ -15,11 +15,22 @@
         android:theme="?attr/actionBarTheme"
         app:titleTextColor="@android:color/white" />
 
+    <ImageView
+        android:layout_below="@id/user_update_toolbar"
+        android:layout_gravity="center_horizontal"
+        android:id="@+id/user_avatar"
+        android:layout_width="100dp"
+        android:onClick="changeUserProfile"
+        android:layout_height="100dp"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/ic_user_light_theme" />
+
     <LinearLayout
+
         android:id="@+id/grouplogin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/user_update_toolbar"
+        android:layout_below="@id/user_avatar"
         android:orientation="vertical">
 
         <android.support.design.widget.TextInputLayout
@@ -106,6 +117,7 @@
             android:layout_marginRight="5dp"
             android:background="@color/colorPrimaryDark"
             android:onClick="updateUser"
+            android:padding="5dp"
             android:text="Update Profile"
             android:textColor="@color/colorAccent" />
 

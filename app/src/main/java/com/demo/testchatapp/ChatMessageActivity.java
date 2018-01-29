@@ -81,7 +81,7 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
     int contextMenuIndexClicked = -1;
     boolean isEditMode = false;
     QBChatMessage editMessage;
-    private int SELECT_PICTURE = 7171;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -358,7 +358,7 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
                 Intent selectImage = new Intent();
                 selectImage.setType("image/*");
                 selectImage.setAction(Intent.ACTION_GET_CONTENT);
-                startActivityForResult(Intent.createChooser(selectImage, "Select Picture"), SELECT_PICTURE);
+                startActivityForResult(Intent.createChooser(selectImage, "Select Picture"), Common.SELECT_PICTURE);
 
             }
         });
@@ -373,7 +373,7 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
     @Override
     protected void onActivityResult(int requestCode, int resultCode, final Intent data) {
         if (resultCode == RESULT_OK) {
-            if (requestCode == SELECT_PICTURE) {
+            if (requestCode == Common.SELECT_PICTURE) {
                 final ProgressDialog dialog = new ProgressDialog(ChatMessageActivity.this);
                 dialog.setMessage("Please wait...");
                 dialog.setCancelable(false);

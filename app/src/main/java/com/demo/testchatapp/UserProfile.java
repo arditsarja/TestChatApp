@@ -2,7 +2,10 @@ package com.demo.testchatapp;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -11,20 +14,106 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.demo.testchatapp.Common.Common;
+import com.demo.testchatapp.Holder.QBUsersHolder;
 import com.quickblox.chat.QBChatService;
+import com.quickblox.content.QBContent;
+import com.quickblox.content.model.QBFile;
 import com.quickblox.core.QBEntityCallback;
 import com.quickblox.core.exception.QBResponseException;
 import com.quickblox.users.QBUsers;
 import com.quickblox.users.model.QBUser;
+import com.squareup.picasso.Picasso;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class UserProfile extends AppCompatActivity {
     EditText edtPassword, edtOldPassword, edtFullName, edtEmail, edtPhone;
     Button updateUser, cancel;
     Toolbar toolbar;
 
+    ImageView user_avatar;
+
+    public void changeUserProfile(View view) {
+        Intent intent = new Intent();
+        intent.setType("image/*");
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        startActivityForResult(Intent.createChooser(intent, "Select Picture"), Common.SELECT_PICTURE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode == RESULT_OK) {
+            if (requestCode == Common.SELECT_PICTURE) {
+
+                final ProgressDialog dialog = new ProgressDialog(UserProfile.this);
+                dialog.setMessage("Please wait..");
+                dialog.setCancelable(false);
+                dialog.show();
+
+
+                try {
+                    InputStream is = getContentResolver().openInputStream(data.getData());
+                    final Bitmap bitmap = BitmapFactory.decodeStream(is);
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
+                    final File file = new File(Environment.getExternalStorageDirectory() + "/myimage.png");
+                    FileOutputStream fileOut = new FileOutputStream(file);
+                    fileOut.write(baos.toByteArray());
+                    fileOut.flush();
+                    fileOut.close();
+
+                    int imageSizeKb = (int) file.length() / 1024;
+                    if (imageSizeKb >= 100 * 1024) {
+                        Toast.makeText(this, "File size is to big", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    QBContent.uploadFileTask(file, true, null).performAsync(new QBEntityCallback<QBFile>() {
+                        @Override
+                        public void onSuccess(QBFile qbFile, Bundle bundle) {
+                            QBUser user = new QBUser();
+                            user.setId(QBChatService.getInstance().getUser().getId());
+                            user.setFileId(qbFile.getId());
+                            QBUsers.updateUser(user).performAsync(new QBEntityCallback<QBUser>() {
+                                @Override
+                                public void onSuccess(QBUser qbUser, Bundle bundle) {
+//                                    Picasso.with(getBaseContext()).load(file).into(user_avatar);
+                                    user_avatar.setImageBitmap(bitmap);
+                                    dialog.dismiss();
+                                }
+
+                                @Override
+                                public void onError(QBResponseException e) {
+                                    dialog.dismiss();
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onError(QBResponseException e) {
+                            Log.e("ERROR", e.getMessage());
+                            dialog.dismiss();
+                        }
+                    });
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                    dialog.dismiss();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    dialog.dismiss();
+                }
+
+            }
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +123,7 @@ public class UserProfile extends AppCompatActivity {
         toolbar.setTitle("Profile Update");
         setSupportActionBar(toolbar);
         initUserProfile();
+        loadUserProfile();
         cancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -41,6 +131,41 @@ public class UserProfile extends AppCompatActivity {
 //                startActivity(new Intent(UserProfile.this,ChatDialogsActivity.class));
             }
         });
+
+    }
+
+    private void loadUserProfile() {
+
+
+        QBUsers.getUser(QBChatService.getInstance().getUser().getId()).performAsync(new QBEntityCallback<QBUser>() {
+            @Override
+            public void onSuccess(QBUser qbUser, Bundle bundle) {
+                QBUsersHolder.getInstance().putUser(qbUser);
+                if (qbUser.getFileId() != null && !qbUser.getFileId().equals("null")) {
+                    QBContent.getFile(qbUser.getFileId()).performAsync(new QBEntityCallback<QBFile>() {
+                        @Override
+                        public void onSuccess(QBFile qbFile, Bundle bundle) {
+                            Picasso.with(getBaseContext()).load(qbFile.getPublicUrl()).into(user_avatar);
+                        }
+
+                        @Override
+                        public void onError(QBResponseException e) {
+
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onError(QBResponseException e) {
+
+            }
+        });
+        final QBUser user = QBChatService.getInstance().getUser();
+
+        edtEmail.setText(user.getEmail());
+        edtFullName.setText(user.getFullName());
+        edtPhone.setText(user.getPhone());
 
     }
 
@@ -74,7 +199,7 @@ public class UserProfile extends AppCompatActivity {
 
             @Override
             public void onError(QBResponseException e) {
-                Toast.makeText(getApplicationContext(),"Failed",Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "Failed", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -123,6 +248,7 @@ public class UserProfile extends AppCompatActivity {
         edtPhone = findViewById(R.id.update_edt_phonee);
         updateUser = findViewById(R.id.update_user_btn_update);
         cancel = findViewById(R.id.update_user_btn_cancel);
+        user_avatar = findViewById(R.id.user_avatar);
 
     }
 }
