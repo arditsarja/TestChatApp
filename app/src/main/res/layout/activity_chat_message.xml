@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context="com.demo.testchatapp.ChatMessageActivity">
 
     <android.support.v7.widget.Toolbar
@@ -95,5 +96,17 @@
         android:onClick="submit"
         android:padding="4dp"
         android:src="@android:drawable/ic_menu_send" />
+
+    <com.bhargavms.dotloader.DotLoader
+        android:id="@+id/dot_loader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="invisible"
+        android:layout_alignBottom="@id/list_of_message"
+        android:layout_centerHorizontal="true"
+        app:color_array="@array/dot_colors"
+        app:dot_radius="4dp"
+        app:number_of_dots="3"
+        />
 
 </RelativeLayout>

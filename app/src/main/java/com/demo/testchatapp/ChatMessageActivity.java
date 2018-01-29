@@ -12,6 +12,8 @@ import android.os.Environment;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
@@ -27,6 +29,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.amulyakhare.textdrawable.TextDrawable;
+import com.bhargavms.dotloader.DotLoader;
 import com.demo.testchatapp.Adapter.ChatMessageAdapter;
 import com.demo.testchatapp.Common.Common;
 import com.demo.testchatapp.Holder.QBChatMessageHolder;
@@ -36,6 +39,7 @@ import com.quickblox.chat.QBRestChatService;
 import com.quickblox.chat.exception.QBChatException;
 import com.quickblox.chat.listeners.QBChatDialogMessageListener;
 import com.quickblox.chat.listeners.QBChatDialogParticipantListener;
+import com.quickblox.chat.listeners.QBChatDialogTypingListener;
 import com.quickblox.chat.model.QBChatDialog;
 import com.quickblox.chat.model.QBChatMessage;
 import com.quickblox.chat.model.QBDialogType;
@@ -81,6 +85,9 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
     int contextMenuIndexClicked = -1;
     boolean isEditMode = false;
     QBChatMessage editMessage;
+
+    //Typing
+    DotLoader dotLoader;
 
 
     @Override
@@ -250,7 +257,7 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
     private void initChatDialogs() {
         qbChatDialog = (QBChatDialog) getIntent().getSerializableExtra(Common.DIALOG_EXTRA);
 
-        if (qbChatDialog.getPhoto()!=null && !qbChatDialog.getPhoto().equals("null")){
+        if (qbChatDialog.getPhoto() != null && !qbChatDialog.getPhoto().equals("null")) {
             QBContent.getFile(Integer.parseInt(qbChatDialog.getPhoto())).performAsync(new QBEntityCallback<QBFile>() {
                 @Override
                 public void onSuccess(QBFile qbFile, Bundle bundle) {
@@ -280,6 +287,9 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
 
             }
         });
+
+        //Add typing listener
+        registerTypingForChatDialog(qbChatDialog);
 
 
         // Add join group to enable group chat
@@ -345,10 +355,81 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
 
     }
 
+    private void registerTypingForChatDialog(QBChatDialog qbChatDialog) {
+        QBChatDialogTypingListener typingListener = new QBChatDialogTypingListener() {
+            @Override
+            public void processUserIsTyping(String dialogID, Integer integer) {
+                if (dotLoader.getVisibility() != View.VISIBLE)
+                    dotLoader.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void processUserStopTyping(String dialogID, Integer integer) {
+                if (dotLoader.getVisibility() != View.INVISIBLE)
+                    dotLoader.setVisibility(View.INVISIBLE);
+            }
+        };
+        qbChatDialog.addIsTypingListener(typingListener);
+
+    }
+
     private void initView() {
+
+        dotLoader = findViewById(R.id.dot_loader);
+
         lstChatMessages = findViewById(R.id.list_of_message);
         submitButton = findViewById(R.id.send_button);
         editContent = findViewById(R.id.edit_content);
+        editContent.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+//                String hi = "";
+//                try {
+//                    qbChatDialog.sendIsTypingNotification();
+//                } catch (XMPPException e) {
+//                    e.printStackTrace();
+//                } catch (SmackException.NotConnectedException e) {
+//                    e.printStackTrace();
+//                }
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+
+                if (count != 0)
+                    try {
+                        qbChatDialog.sendIsTypingNotification();
+                    } catch (XMPPException e) {
+                        e.printStackTrace();
+                    } catch (SmackException.NotConnectedException e) {
+                        e.printStackTrace();
+                    }
+                else
+                    try {
+                        qbChatDialog.sendStopTypingNotification();
+                    } catch (XMPPException e) {
+                        e.printStackTrace();
+                    } catch (SmackException.NotConnectedException e) {
+                        e.printStackTrace();
+                    }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String hi = s.toString();
+                String hisd = s.toString();
+//                try {
+//                    qbChatDialog.sendStopTypingNotification();
+//                } catch (XMPPException e) {
+//                    e.printStackTrace();
+//                } catch (SmackException.NotConnectedException e) {
+//                    e.printStackTrace();
+//                }
+            }
+        });
+
+
         chatMessageGroupToolbar = findViewById(R.id.chat_message_toolbar);
         imgOnlineCount = findViewById(R.id.img_online_count);
         dialogAvatar = findViewById(R.id.dialog_avatar);
