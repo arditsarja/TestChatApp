@@ -250,7 +250,7 @@ public class ChatMessageActivity extends AppCompatActivity implements QBChatDial
     private void initChatDialogs() {
         qbChatDialog = (QBChatDialog) getIntent().getSerializableExtra(Common.DIALOG_EXTRA);
 
-        if (qbChatDialog.getPhoto()!=null){
+        if (qbChatDialog.getPhoto()!=null && !qbChatDialog.getPhoto().equals("null")){
             QBContent.getFile(Integer.parseInt(qbChatDialog.getPhoto())).performAsync(new QBEntityCallback<QBFile>() {
                 @Override
                 public void onSuccess(QBFile qbFile, Bundle bundle) {
